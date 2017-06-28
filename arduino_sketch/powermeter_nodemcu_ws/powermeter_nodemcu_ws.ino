@@ -7,12 +7,10 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <EmonLib.h>
-#include <FS.h>
+#include <NodeMcuFile.h>
 #include <ESP8266mDNS.h>
 #include <ESP8266HTTPUpdateServer.h>
 
-bool readFile(String fName_A, String& buf_A);
-bool saveFile(String fName_A, String buf_A);
 void sendData(double power_A, String hostname_A, String apiCode_A);
 void handleRoot();
 void handleNotFound();
@@ -22,6 +20,8 @@ const char* host = "esp8266-power-webupdate";
 const char* update_path = "/firmware";
 const char* update_username = "admin";
 const char* update_password = "admin";
+
+NodeMcuFile f;
 
 #define OLED_RESET 14
 Adafruit_SSD1306 display(OLED_RESET);
@@ -134,16 +134,16 @@ void setup()
   display.display();
 
   //File system
-  SPIFFS.begin();
+  f.start();
 
   //Open HTTP Address
-  readFile(httpAddrFile, httpAddress);
+  f.readFile(httpAddrFile, httpAddress);
   
   //Open API code
-  readFile(apiCodeFile, apiCode);
+  f.readFile(apiCodeFile, apiCode);
 
   //Open voltage
-  readFile(voltageFile, voltage);
+  f.readFile(voltageFile, voltage);
 }
 
 void loop() 
@@ -194,49 +194,6 @@ void loop()
   }
 }
 
-bool readFile(String fName_A, String& buf_A)
-{
-  bool res = false;
-  
-  File f = SPIFFS.open(fName_A, "r");
-
-  if (f) 
-  {
-    buf_A = f.readStringUntil('n');
-
-    Serial.print("file read: ");
-    Serial.println(buf_A);
-    f.close();
-    res = true;
-  }
-  else
-  {
-    Serial.println(fName_A);
-    Serial.println("file open failed");  
-  }
-
-  return res;
-}
-
-bool saveFile(String fName_A, String buf_A)
-{
-  bool res = false;
-  File f = SPIFFS.open(fName_A, "w+");
-  if (f) 
-  {
-    f.print(buf_A);
-    f.close();
-    res = true;
-  }
-  else
-  {
-    Serial.println(fName_A);
-    Serial.println("file open failed");
-  }
-
-  return res;
-}
-
 void sendData(double power_A, String hostname_A, String apiCode_A)
 {
   WiFiClient emoncmsClient;
@@ -244,12 +201,6 @@ void sendData(double power_A, String hostname_A, String apiCode_A)
   strcpy(hostnameBuff, hostname_A.c_str());
   strcpy(apiCodeBuff, apiCode_A.c_str());
 
-/*
-  String fullHostName = hostname_A;
-
-  fullHostName.toCharArray(hostnameBuff, fullHostName.length());
-  apiCode_A.toCharArray(apiCodeBuff, apiCode_A.length());
-*/
   Serial.println(hostname_A);
   Serial.println(hostnameBuff);
 
@@ -295,21 +246,21 @@ void handleRoot()
       httpAddress = httpServer.arg("HTTP_ADDR");
       Serial.print("Http Addr:");
       Serial.println(httpAddress);
-      saveFile(httpAddrFile, httpAddress);
+      f.saveFile(httpAddrFile, httpAddress);
     }
     if(httpServer.hasArg("CODE"))
     {
       apiCode = httpServer.arg("CODE");
       Serial.print("API code:");
       Serial.println(apiCode);
-      saveFile(apiCodeFile, apiCode);
+      f.saveFile(apiCodeFile, apiCode);
     }
     if(httpServer.hasArg("VOLTAGE"))
     {
       voltage = httpServer.arg("VOLTAGE");
       Serial.print("Voltage:");
       Serial.println(voltage);
-      saveFile(voltageFile, voltage);
+      f.saveFile(voltageFile, voltage);
     }
     sendPage();
   }
