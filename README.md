@@ -21,3 +21,5 @@ https://github.com/adafruit/Adafruit-GFX-Library
 https://github.com/openenergymonitor/EmonLib
 
 https://github.com/tzapu/WiFiManager
+
+https://github.com/victor999/Libaries-for-ESP8266-NodeMcu/tree/master/NodeMcuFile
